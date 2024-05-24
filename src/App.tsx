@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Main from "./components/main/Main";
 import NavBar from "./components/navbar/NavBar";
 import NumResults from "./components/navbar/NumResults";
@@ -7,30 +7,10 @@ import Box from "./components/main/Box";
 import MovieList from "./components/main/MovieList";
 import WatchedSummary from "./components/main/WatchedSummary";
 import WatchedMovieList from "./components/main/WatchedMovieList";
+import axios from "axios";
+import Loader from "./components/Loader";
+import ErrorMessage from "./components/Error";
 
-const tempMovieData = [
-  {
-    imdbID: "tt1375666",
-    Title: "Inception",
-    Year: "2010",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_SX300.jpg",
-  },
-  {
-    imdbID: "tt0133093",
-    Title: "The Matrix",
-    Year: "1999",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg",
-  },
-  {
-    imdbID: "tt6751668",
-    Title: "Parasite",
-    Year: "2019",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BYWZjMjk3ZTItODQ2ZC00NTY5LWE0ZDYtZTI3MjcwN2Q5NTVkXkEyXkFqcGdeQXVyODk4OTc3MTY@._V1_SX300.jpg",
-  },
-];
 const tempWatchedData = [
   {
     imdbID: "tt1375666",
@@ -60,10 +40,58 @@ export const average = (arr: any) =>
     0
   );
 
+type movieType = {
+  imdbID: string;
+  Title: string;
+  Year: string;
+  Poster: string;
+}[];
+
+type watchedMoviesType = {
+  imdbID: string;
+  Title: string;
+  Year: string;
+  Poster: string;
+  runtime: number;
+  imdbRating: number;
+  userRating: number;
+}[];
+
 function App() {
   //prop drilling problem since we need this in both movie List and search component
-  const [movies, setMovies] = useState(tempMovieData);
-  const [watched, setWatched] = useState(tempWatchedData);
+  const [movies, setMovies] = useState<movieType>([]);
+  const [watched, setWatched] = useState<watchedMoviesType>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // will work after the initial render
+  // convert yo async :)
+  // in react 18 effects run twice due to strict mode
+  useEffect(() => {
+    async function fetchMovies() {
+      setIsLoading(true);
+      await axios
+        .get(
+          `http://www.omdbapi.com/?i=tt3896198&apikey=${
+            import.meta.env.VITE_OMDB_API_KEY
+          }&s=mona`
+        )
+        .then((res) => {
+          //in case no movie is found this is based on the res from api
+          if (res.data.Response === "False") throw new Error("Movie Not Found");
+
+          setMovies(res.data.Search);
+        })
+        .catch((err) => {
+          console.log("error in fetching movies : " + err.message);
+          setError(err.message);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+    fetchMovies();
+  }, []);
 
   return (
     <>
@@ -75,7 +103,9 @@ function App() {
 
       <Main>
         <Box>
-          <MovieList movies={movies} />
+          {isLoading && <Loader />}
+          {!isLoading && !error && <MovieList movies={movies} />}
+          {error && <ErrorMessage message={error} />}
         </Box>
         <Box>
           <WatchedSummary watched={watched} />
