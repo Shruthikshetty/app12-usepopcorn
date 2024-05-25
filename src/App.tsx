@@ -10,6 +10,7 @@ import WatchedMovieList from "./components/main/WatchedMovieList";
 import axios from "axios";
 import Loader from "./components/Loader";
 import ErrorMessage from "./components/Error";
+import { MovieDetails, watchedMovieType } from "./components/main/MovieDetails";
 
 const tempWatchedData = [
   {
@@ -47,15 +48,7 @@ type movieType = {
   Poster: string;
 }[];
 
-type watchedMoviesType = {
-  imdbID: string;
-  Title: string;
-  Year: string;
-  Poster: string;
-  runtime: number;
-  imdbRating: number;
-  userRating: number;
-}[];
+export type watchedMoviesType = watchedMovieType[];
 
 function App() {
   //prop drilling problem since we need this in both movie List and search component
@@ -63,6 +56,8 @@ function App() {
   const [watched, setWatched] = useState<watchedMoviesType>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("dragon ball");
+  const [selectedId, setSelectedId] = useState<null | string>(null);
 
   // will work after the initial render
   // convert yo async :)
@@ -70,17 +65,18 @@ function App() {
   useEffect(() => {
     async function fetchMovies() {
       setIsLoading(true);
+      setError("");
       await axios
         .get(
           `http://www.omdbapi.com/?i=tt3896198&apikey=${
             import.meta.env.VITE_OMDB_API_KEY
-          }&s=mona`
+          }&s=${query}`
         )
         .then((res) => {
           //in case no movie is found this is based on the res from api
           if (res.data.Response === "False") throw new Error("Movie Not Found");
 
-          setMovies(res.data.Search);
+          setMovies(res.data?.Search);
         })
         .catch((err) => {
           console.log("error in fetching movies : " + err.message);
@@ -90,26 +86,64 @@ function App() {
           setIsLoading(false);
         });
     }
+    if (query.length < 3) {
+      setMovies([]);
+      setError("");
+      // movies fetch will not be called
+      return;
+    }
     fetchMovies();
-  }, []);
+  }, [query]);
+
+  // Function to handle selecting a movie by its ID
+  function handleSelectMovie(movieId: string) {
+    setSelectedId((s) => (s === movieId ? null : movieId));
+  }
+
+  // Function to handle closing a selected movie
+  function handleCloseMovie() {
+    setSelectedId(null);
+  }
+
+  // Function to add a watched movie to the list of watched movies
+  function handleAddWatched(movie: watchedMovieType) {
+    setWatched((watched) => [...watched, movie]);
+  }
+
+  function handleDeleteWatched(id: string) {
+    setWatched((s) => s.filter((movie) => movie.imdbId !== id));
+  }
 
   return (
     <>
       {/* fixing prop drilling issue by using component composition */}
       <NavBar>
-        <Search />
+        <Search query={query} setQuery={setQuery} />
         <NumResults movies={movies} />
       </NavBar>
 
       <Main>
         <Box>
           {isLoading && <Loader />}
-          {!isLoading && !error && <MovieList movies={movies} />}
+          {!isLoading && !error && (
+            <MovieList movies={movies} onSelectMovie={handleSelectMovie} />
+          )}
           {error && <ErrorMessage message={error} />}
         </Box>
         <Box>
-          <WatchedSummary watched={watched} />
-          <WatchedMovieList watched={watched} />
+          {selectedId ? (
+            <MovieDetails
+              selectedId={selectedId}
+              onCloseMovie={handleCloseMovie}
+              onAddWatched={handleAddWatched}
+              watched={watched}
+            />
+          ) : (
+            <>
+              <WatchedSummary watched={watched} />
+              <WatchedMovieList watched={watched} onDeleteWatched={handleDeleteWatched}/>
+            </>
+          )}
         </Box>
       </Main>
     </>

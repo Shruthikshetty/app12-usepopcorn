@@ -1,10 +1,5 @@
-import { useState } from "react";
-
-
-
 //statefull component
-export default function Search() {
-  const [query, setQuery] = useState("");
+export default function Search({ query, setQuery }: SearchProps) {
   return (
     <input
       className="search"
@@ -15,3 +10,8 @@ export default function Search() {
     />
   );
 }
+
+type SearchProps = {
+  query: string;
+  setQuery: React.Dispatch<React.SetStateAction<string>>;
+};
