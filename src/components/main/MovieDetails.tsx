@@ -20,6 +20,22 @@ export function MovieDetails({
     (movie) => movie.imdbId === selectedId
   )?.userRating;
 
+  // Add event listener to close the selected movie when the "Escape" key is pressed
+  useEffect(() => {
+    function callback(e: KeyboardEvent) {
+      if (e.code === "Escape") {
+        onCloseMovie();
+        console.log("Closing");
+      }
+    }
+    document.addEventListener("keydown", callback);
+
+    // cleaning up
+    return () => {
+      document.removeEventListener("keydown", callback);
+    };
+  }, [onCloseMovie]); // why?
+
   useEffect(() => {
     async function fetchDetails() {
       setIsLoading(true);
@@ -57,11 +73,16 @@ export function MovieDetails({
     }
   }
 
-// Update the document title with the movie title when it changes
-useEffect(() => {
-  if (!movie?.Title) return;
-  document.title = `MOVIE | ${movie?.Title}`;
-}, [movie?.Title]);
+  // Update the document title with the movie title when it changes
+  useEffect(() => {
+    if (!movie?.Title) return;
+    document.title = `MOVIE | ${movie?.Title}`;
+
+    // cleanUp function
+    return () => {
+      document.title = "usePopcorn";
+    };
+  }, [movie?.Title]);
 
   if (movie) {
     return (
@@ -123,7 +144,7 @@ useEffect(() => {
 type MovieDetailsProps = {
   selectedId: string;
   onCloseMovie: () => void;
-  onAddWatched: (movie: any) => void;
+  onAddWatched: (movie: watchedMovieType) => void;
   watched: watchedMoviesType;
 };
 

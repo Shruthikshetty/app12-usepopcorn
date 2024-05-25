@@ -12,31 +12,10 @@ import Loader from "./components/Loader";
 import ErrorMessage from "./components/Error";
 import { MovieDetails, watchedMovieType } from "./components/main/MovieDetails";
 
-const tempWatchedData = [
-  {
-    imdbID: "tt1375666",
-    Title: "Inception",
-    Year: "2010",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_SX300.jpg",
-    runtime: 148,
-    imdbRating: 8.8,
-    userRating: 10,
-  },
-  {
-    imdbID: "tt0088763",
-    Title: "Back to the Future",
-    Year: "1985",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BZmU0M2Y1OGUtZjIxNi00ZjBkLTg1MjgtOWIyNThiZWIwYjRiXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX300.jpg",
-    runtime: 116,
-    imdbRating: 8.5,
-    userRating: 9,
-  },
-];
-
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const average = (arr: any) =>
   arr.reduce(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (acc: any, cur: any, i: any, arr: any) => acc + cur / arr.length,
     0
   );
@@ -63,6 +42,8 @@ function App() {
   // convert yo async :)
   // in react 18 effects run twice due to strict mode
   useEffect(() => {
+    const controller = new AbortController(); // browser api
+
     async function fetchMovies() {
       setIsLoading(true);
       setError("");
@@ -70,17 +51,21 @@ function App() {
         .get(
           `http://www.omdbapi.com/?i=tt3896198&apikey=${
             import.meta.env.VITE_OMDB_API_KEY
-          }&s=${query}`
+          }&s=${query}`,
+          { signal: controller.signal }
         )
         .then((res) => {
           //in case no movie is found this is based on the res from api
           if (res.data.Response === "False") throw new Error("Movie Not Found");
 
           setMovies(res.data?.Search);
+          /* setError("") */
         })
         .catch((err) => {
-          console.log("error in fetching movies : " + err.message);
-          setError(err.message);
+          if (err.name !== "CanceledError") {
+            console.log("error in fetching movies : " + err);
+            setError(err.message);
+          }
         })
         .finally(() => {
           setIsLoading(false);
@@ -92,7 +77,12 @@ function App() {
       // movies fetch will not be called
       return;
     }
+    handleCloseMovie();
     fetchMovies();
+
+    return () => {
+      controller.abort();
+    };
   }, [query]);
 
   // Function to handle selecting a movie by its ID
@@ -141,7 +131,10 @@ function App() {
           ) : (
             <>
               <WatchedSummary watched={watched} />
-              <WatchedMovieList watched={watched} onDeleteWatched={handleDeleteWatched}/>
+              <WatchedMovieList
+                watched={watched}
+                onDeleteWatched={handleDeleteWatched}
+              />
             </>
           )}
         </Box>
