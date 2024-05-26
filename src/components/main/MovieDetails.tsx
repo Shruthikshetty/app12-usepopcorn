@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import StartRating from "../StarRating";
 import Loader from "../Loader";
 import { watchedMoviesType } from "../../App";
+import { useKey } from "../../hooks/useKey";
 
 export function MovieDetails({
   selectedId,
@@ -20,21 +21,9 @@ export function MovieDetails({
     (movie) => movie.imdbId === selectedId
   )?.userRating;
 
-  // Add event listener to close the selected movie when the "Escape" key is pressed
-  useEffect(() => {
-    function callback(e: KeyboardEvent) {
-      if (e.code === "Escape") {
-        onCloseMovie();
-        console.log("Closing");
-      }
-    }
-    document.addEventListener("keydown", callback);
+  // Add event listener to close the selected movie when the "Escape" key is pressed using a custom hook
 
-    // cleaning up
-    return () => {
-      document.removeEventListener("keydown", callback);
-    };
-  }, [onCloseMovie]); // why?
+  useKey("Escape", onCloseMovie);
 
   useEffect(() => {
     async function fetchDetails() {
